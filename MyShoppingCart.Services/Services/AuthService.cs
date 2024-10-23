@@ -51,6 +51,7 @@ namespace LMS.Services.Services
 
         public async Task<dynamic> Registration(UserModel user)
         {
+            // NAzir
             var bookCategoryData = await _unitOfWork.GenericRepository<User>().GetAllAsync().ConfigureAwait(false);
             if (bookCategoryData.Any(x => x.Email == user.Email))
             {
