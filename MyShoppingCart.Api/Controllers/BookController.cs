@@ -1,5 +1,6 @@
 ﻿using LMS.Models.Models;
 using LMS.Services.IServices;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace LMS.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "ADMIN")]
     public class BookController : ControllerBase
     {
         private readonly IBookService _iBookService;

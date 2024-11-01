@@ -4,11 +4,18 @@ using LMS.Tables.Table;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PdfSharpCore.Pdf;
+using PdfSharpCore;
+using TheArtOfDev.HtmlRenderer.PdfSharp;
+using System.Text.Json;
+using System;
+using LMS.Models.Common;
 
 namespace LMS.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class LibraryController : ControllerBase
     {
         private readonly ILibraryService _iLibraryService;
@@ -16,6 +23,13 @@ namespace LMS.Api.Controllers
         public LibraryController(ILibraryService iLibraryService)
         {
             _iLibraryService = iLibraryService;
+        }
+
+        [HttpGet("Dashboard")]
+        public async Task<IActionResult> Dashboard()
+        {
+            var res = await _iLibraryService.Dashboard();
+            return Ok(res);
         }
 
         [HttpGet("OrderBook")]
@@ -32,24 +46,10 @@ namespace LMS.Api.Controllers
             return Ok(res);
         }
 
-        [HttpPost("AddCategory")]
-        public async Task<IActionResult> AddCategory(BookCategoryModel bookCategory)
-        {
-            var res = await _iLibraryService.AddCategory(bookCategory);
-            return Ok(res);
-        }
-
-        [HttpGet("GetCategories")]
-        public async Task<IActionResult> GetCategories()
-        {
-            var res = await _iLibraryService.GetCategories();
-            return Ok(res);
-        }
-
         [HttpGet("ReturnBook")]
-        public async Task<IActionResult> ReturnBook(int userId, int bookId, int fine)
+        public async Task<IActionResult> ReturnBook(int id)
         {
-            var res = await _iLibraryService.ReturnBook(userId, bookId, fine);
+            var res = await _iLibraryService.ReturnBook(id);
             return Ok(res);
         }
              
@@ -81,6 +81,23 @@ namespace LMS.Api.Controllers
             return Ok(res);
         }
 
+        [HttpGet("OrderReport")]
+        public async Task<IActionResult> OrderReport()
+        {
+            var res = await _iLibraryService.OrderReport();
+
+            var document = new PdfDocument();
+            string HtmlContent = "<h1>Hello World!</h1>";
+            PdfGenerator.AddPdfPages(document, res, PageSize.A4);
+            byte[]? response = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                document.Save(ms);
+                response = ms.ToArray();
+            }
+            string Filename = "Invoice_" + 1 + ".pdf";
+            return File(response, "application/pdf", Filename);
+        }
 
 
     }

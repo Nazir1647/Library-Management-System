@@ -38,6 +38,7 @@ namespace LMS.Abstractions.Implementations
 
         public async Task<T> GetByIdAsync(Expression<Func<T, bool>> Predicate)
         {
+
             return await _dbSet.Where(Predicate).FirstOrDefaultAsync();
         }
 

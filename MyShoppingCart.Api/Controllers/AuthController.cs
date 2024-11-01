@@ -33,5 +33,26 @@ namespace LMS.Api.Controllers
             return Ok(res);
         }
 
+        [HttpGet("GetAll")]
+        public async Task<IActionResult> GetAll()
+        {
+            var res = await _authService.GetAll();
+            return Ok(res);
+        }
+
+        [HttpGet("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            var res = await _authService.GetById(email);
+            return Ok(res);
+        }
+
+        [HttpPost("ChangePassword")]
+        public async Task<IActionResult> ChangePassword(ForgotPasswordModel forgotPasswordModel)
+        {
+            var res = await _authService.ChangePassword(forgotPasswordModel);
+            return Ok(res);
+        }
+
     }
 }

@@ -31,6 +31,10 @@ namespace LMS.Models.Common
         public const string AlreadyExist = "{0} already exist";
         public const string Error = "An error occurred. Please try again";
         public const string LoginFailed = "Invalid login attempt. Please confirm your username and password and try again";
+        public const string AccountUnapproved = "Your account is not approved yet. Please contact to admin.";
+        public const string AccountBlocked = "Your account has been blocked. Please contact support.";
+        public const string BookReturned = "Book returned successfully.";
+  // Other messages...
         #endregion
     }
 }

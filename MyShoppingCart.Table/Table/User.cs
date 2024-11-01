@@ -15,13 +15,13 @@ namespace LMS.Tables.Table
         public string Password { get; set; } = string.Empty;
         public string MobileNumber { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
-        public UserType UserType { get; set; } = UserType.NONE;
+        public UserType UserType { get; set; } = UserType.STUDENT;
         public AccountStatus AccountStatus { get; set; } = AccountStatus.UNAPROOVED;
     }
 
     public enum UserType
     {
-        NONE, ADMIN, STUDENT
+        STUDENT, ADMIN
     }
 
     public enum AccountStatus

@@ -3,13 +3,7 @@ using LMS.Models.Common;
 using LMS.Models.Models;
 using LMS.Services.IServices;
 using LMS.Tables.Table;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using static System.Reflection.Metadata.BlobBuilder;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace LMS.Services.Services
 {
@@ -21,33 +15,15 @@ namespace LMS.Services.Services
             _unitOfWork = unitOfWork;
         }
 
-
-        public async Task<dynamic> AddCategory(BookCategoryModel bookCategory)
-        {
-            var bookCategoryData = await _unitOfWork.GenericRepository<BookCategory>().GetAllAsync().ConfigureAwait(false);
-            if (bookCategoryData.Any(x => x.SubCategory == bookCategory.SubCategory))
-            {
-                return new ApiResponse<string>(Status.FAIL, string.Format(AlertMessages.AlreadyExist, bookCategory.SubCategory), "");
-            }
-            var data = new BookCategory
-            {
-                Category = bookCategory.Category,
-                SubCategory = bookCategory.SubCategory
-            };
-            await _unitOfWork.GenericRepository<BookCategory>().SaveAsync(data);
-            await _unitOfWork.CompleteAsync();
-            return new ApiResponse<BookCategory>(Status.OK, AlertMessages.SaveSuccessful, data);
-        }
-
         public async Task<dynamic> ApproveRequest(int userId)
         {
-            var userData = await _unitOfWork.GenericRepository<User>().GetByIdAsync(x=>x.Id == userId).ConfigureAwait(false);
+            var userData = await _unitOfWork.GenericRepository<User>().GetByIdAsync(x => x.Id == userId).ConfigureAwait(false);
             if (userData == null)
             {
                 return new ApiResponse<string>(Status.FAIL, AlertMessages.NotFound, "");
             }
 
-            if(userData.AccountStatus != AccountStatus.BLOCKED)
+            if (userData.AccountStatus != AccountStatus.BLOCKED)
             {
                 userData.AccountStatus = AccountStatus.ACTIVE;
                 await _unitOfWork.GenericRepository<User>().UpdateAsync(userData);
@@ -62,19 +38,6 @@ namespace LMS.Services.Services
             throw new NotImplementedException();
         }
 
-
-
-        public async Task<dynamic> GetCategories()
-        {
-            var bookCategoryData = await _unitOfWork.GenericRepository<BookCategory>().GetAllAsync().ConfigureAwait(false);
-            var data = bookCategoryData.Select(x => new BookCategoryModel
-            {
-                Id = x.Id,
-                Category = x.Category,
-                SubCategory = x.SubCategory
-            });
-            return new ApiResponse<IEnumerable<BookCategoryModel>>(Status.OK, AlertMessages.Success, data);
-        }
 
         public async Task<dynamic> GetOrders()
         {
@@ -134,7 +97,13 @@ namespace LMS.Services.Services
         public async Task<dynamic> OrderBook(int userId, int bookId)
         {
             var UserOrderData = await _unitOfWork.GenericRepository<Order>().GetAllAsync().ConfigureAwait(false);
-            var canOrder = UserOrderData.Count(x => !x.Returned) < 3;
+
+            if(UserOrderData.Any(x=>x.UserId == userId && x.BookId == bookId && !x.Returned))
+            {
+                return new ApiResponse<string>(Status.FAIL, "You already have this book borrowed. Please select a different book.", "");
+            }
+
+            var canOrder = UserOrderData.Count(x => x.UserId == userId && !x.Returned) < 3;
             if (canOrder)
             {
                 var order = new Order
@@ -153,36 +122,35 @@ namespace LMS.Services.Services
             }
             else
             {
-                return new ApiResponse<string>(Status.OK, "cannot order", "");
+                return new ApiResponse<string>(Status.FAIL, "You have reached the limit of 3 books. Please return a book before borrowing more.", "");
             }
         }
 
-        public async Task<dynamic> ReturnBook(int userId, int bookId, int fine)
+        public async Task<dynamic> ReturnBook(int id)
         {
-            var orderData = await _unitOfWork.GenericRepository<Order>().GetAllByIdAsync(x => x.Id == userId).ConfigureAwait(false);
-            var order = orderData.FirstOrDefault(x => x.BookId == bookId);
-            if (order != null)
+            var orderData = await _unitOfWork.GenericRepository<Order>().GetByIdAsync(x => x.Id == id).ConfigureAwait(false);
+            if (orderData != null)
             {
-                order.Returned = true;
-                order.ReturnDate = DateTime.Now;
-                order.FinePaid = fine;
+                orderData.Returned = true;
+                orderData.ReturnDate = DateTime.Now;
+                orderData.FinePaid = 0;
 
-                var BookData = await _unitOfWork.GenericRepository<Book>().GetByIdAsync(x => x.Id == bookId).ConfigureAwait(false);
+                var BookData = await _unitOfWork.GenericRepository<Book>().GetByIdAsync(x => x.Id == orderData.BookId).ConfigureAwait(false);
                 BookData.Ordered = false;
 
-                await _unitOfWork.GenericRepository<Order>().UpdateAsync(order);
+                await _unitOfWork.GenericRepository<Order>().UpdateAsync(orderData);
                 await _unitOfWork.GenericRepository<Book>().UpdateAsync(BookData);
                 await _unitOfWork.CompleteAsync();
-                return new ApiResponse<string>(Status.FAIL, "book returned", "");
+                return new ApiResponse<string>(Status.OK, AlertMessages.BookReturned, "");
             }
             return new ApiResponse<string>(Status.FAIL, "book not returned", "");
         }
 
         public async Task<dynamic> Unblock(int userId)
         {
-            var userData = await _unitOfWork.GenericRepository<User>().GetByIdAsync(x=>x.Id == userId).ConfigureAwait(false);
+            var userData = await _unitOfWork.GenericRepository<User>().GetByIdAsync(x => x.Id == userId).ConfigureAwait(false);
 
-            if(userData != null)
+            if (userData != null)
             {
                 userData.AccountStatus = AccountStatus.ACTIVE;
                 await _unitOfWork.GenericRepository<User>().UpdateAsync(userData);
@@ -191,5 +159,90 @@ namespace LMS.Services.Services
             }
             return new ApiResponse<string>(Status.FAIL, "not unblocked", "");
         }
+
+        public async Task<string> OrderReport()
+        {
+            var orderData = await _unitOfWork.GenericRepository<Order>().GetAllAsync().ConfigureAwait(false);
+            var bookData = await _unitOfWork.GenericRepository<Book>().GetAllAsync().ConfigureAwait(false);
+            var userData = await _unitOfWork.GenericRepository<User>().GetAllAsync().ConfigureAwait(false);
+
+            var data = from od in orderData
+                       join
+                       bd in bookData on od.BookId equals bd.Id
+                       join
+                       u in userData on od.UserId equals u.Id
+                       select new OrderModel
+                       {
+                           UserId = od.UserId,
+                           BookId = od.BookId,
+                           OrderDate = od.OrderDate,
+                           Returned = od.Returned,
+                           ReturnDate = od.ReturnDate,
+                           FinePaid = od.FinePaid,
+                           Id = od.Id,
+                           Username = u.FirstName + " " + u.LastName,
+                           Bookname = bd.Title,
+                           Email = u.Email
+                           
+                       };
+            return htmlContent(data.ToList());
+        }
+
+        private string htmlContent(List<OrderModel> Order)
+        {
+            var templatePath = Path.Combine(Directory.GetCurrentDirectory(), "Template", "Report.html");
+          
+            if (!File.Exists(templatePath))          
+                throw new FileNotFoundException("The HTML template file was not found.", templatePath);          
+
+            string htmlTemplate = File.ReadAllText(templatePath);
+
+            StringBuilder tbody = new StringBuilder();
+            int srNo = 1; 
+
+            foreach (var item in Order)
+            {
+                tbody.Append("<tr>")
+                     .Append($"<td>{srNo}</td>")
+                     .Append($"<td>{item.Username}</td>")
+                     .Append($"<td>{item.Bookname}</td>")
+                     .Append($"<td>{item.Email}</td>")
+                     .Append($"<td>{item.OrderDate:yyyy-MM-dd}</td>")
+                     .Append($"<td>{item.ReturnDate?.ToString("yyyy-MM-dd") ?? ""}</td>")
+                     .Append($"<td>{(item.Returned ? "Completed" : "Pending")}</td>")
+                     .Append("</tr>");
+
+                srNo++;
+            }
+
+            htmlTemplate = htmlTemplate.Replace("##TBody", tbody.ToString());
+            return htmlTemplate;
+        }
+
+        public async Task<dynamic> Dashboard()
+        {
+            var orderData = await _unitOfWork.GenericRepository<Order>().GetAllAsync().ConfigureAwait(false);
+            var userData = await _unitOfWork.GenericRepository<User>().GetAllAsync().ConfigureAwait(false);
+            var bookData = await _unitOfWork.GenericRepository<Book>().GetAllAsync().ConfigureAwait(false);
+
+            int totalOrder = orderData.Count();
+            int Pending = orderData.Count(x => x.Returned == false);
+            int completed = orderData.Count(x => x.Returned == true);
+
+            DashboardModel dashboard = new DashboardModel()
+            {
+                orders = totalOrder,
+                books = bookData.Count(),
+                users = userData.Count(),
+                bookOrder = new BookOrder
+                {
+                    Total = totalOrder,
+                    Pending = Pending,
+                    Completed = completed
+                }
+            };
+            return new ApiResponse<DashboardModel>(Status.OK, AlertMessages.Success, dashboard);
+        }
+
     }
 }

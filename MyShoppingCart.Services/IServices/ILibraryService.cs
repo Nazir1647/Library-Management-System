@@ -12,12 +12,12 @@ namespace LMS.Services.IServices
     {
         Task<dynamic> OrderBook(int userId, int bookId);
         Task<dynamic> GetOrdersOFUser(int userId);
-        Task<dynamic> AddCategory(BookCategoryModel bookCategory);
-        Task<dynamic> GetCategories();
-        Task<dynamic> ReturnBook(int userId, int bookId, int fine);
+        Task<dynamic> ReturnBook(int id);
         Task<dynamic> ApproveRequest(int userId);
         Task<dynamic> GetOrders();
         Task<dynamic> BlockFineOverdueUsers(int id);
         Task<dynamic> Unblock(int userId);
+        Task<string> OrderReport();
+        Task<dynamic> Dashboard();
     }
 }

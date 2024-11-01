@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LMS.Models.Models
 {
-    public class UserCred
+    public class ForgotPasswordModel
     {
-        [Required]
-        public string? Email { get; set; }
-        [Required]
+        public int userId { get; set; }
+        public int Otp { get; set; }
         public string? Password { get; set; }
     }
 }

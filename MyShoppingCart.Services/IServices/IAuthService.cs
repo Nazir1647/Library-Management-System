@@ -12,5 +12,8 @@ namespace LMS.Services.IServices
     {
         Task<dynamic> Login(UserCred user);
         Task<dynamic> Registration(UserModel user);
+        Task<dynamic> GetAll();
+        Task<dynamic> GetById(string email);
+        Task<dynamic> ChangePassword(ForgotPasswordModel forgotPasswordModel);
     }
 }
